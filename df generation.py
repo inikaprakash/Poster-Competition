@@ -8,7 +8,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import pairwise_distances
 
 
-BASE_DIR = Path(r"C:\Users\ip471\Documents\year 2 research project")
+BASE_DIR = Path(r"C:\Users\ip471\OneDrive\Documents\GitHub\Poster-Competition")
 
 DATA_DIR = BASE_DIR / "data"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
