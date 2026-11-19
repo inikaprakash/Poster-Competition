@@ -1,0 +1,2 @@
+# Does-Volatility-Estimation-Effect-the-Accuracy-of-Classical-and-ML-Option-Pricing-Models-
+This study tests how implied vs. 30-day historical volatility impacts option pricing accuracy across seven major US tech stocks. Using RMSE, MAE, and R², it compares Black–Scholes and Monte Carlo against Random Forest, XGBoost, CatBoost, and LSTM to see which volatility works best and whether effects differ between classical and ML models.
