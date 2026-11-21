@@ -284,12 +284,12 @@ def add_iv_surface(target_df, reference_df, exclude_self=False):
     return target_df
 
 
-def validate_datasets(hv_train, hv_test, iv_train, iv_test):
+
+def validate_datasets(iv_train_df, hv_train_df, test_df):
     datasets = {
-        "HV train": hv_train,
-        "HV test": hv_test,
-        "IV train": iv_train,
-        "IV test": iv_test
+        "IV training": iv_train_df,
+        "HV training": hv_train_df,
+        "Uniform test": test_df
     }
 
     for name, dataset in datasets.items():
@@ -297,27 +297,30 @@ def validate_datasets(hv_train, hv_test, iv_train, iv_test):
         print(f"Rows: {len(dataset)}")
         print(f"Missing values:\n{dataset.isna().sum()}")
 
-        assert dataset["sigma"].notna().all()
-        assert np.isfinite(dataset["sigma"]).all()
         assert dataset["target_price"].notna().all()
         assert np.isfinite(dataset["target_price"]).all()
         assert (dataset["target_price"] > 0).all()
+
+    for dataset in [iv_train_df, hv_train_df]:
+        assert dataset["sigma"].notna().all()
+        assert np.isfinite(dataset["sigma"]).all()
         assert (dataset["sigma"] > 0).all()
 
-    assert hv_train["contract_id"].tolist() == iv_train["contract_id"].tolist()
-    assert hv_test["contract_id"].tolist() == iv_test["contract_id"].tolist()
+    for column in ["sigma_HV", "sigma_IV"]:
+        assert test_df[column].notna().all()
+        assert np.isfinite(test_df[column]).all()
+        assert (test_df[column] > 0).all()
+
+    assert iv_train_df["contract_id"].tolist() == hv_train_df["contract_id"].tolist()
 
     assert np.allclose(
-        hv_train["target_price"],
-        iv_train["target_price"]
+        iv_train_df["target_price"],
+        hv_train_df["target_price"]
     )
 
-    assert np.allclose(
-        hv_test["target_price"],
-        iv_test["target_price"]
-    )
+    assert test_df["contract_id"].is_unique
 
-    print("\nDataset validation completed successfully.")
+    print("\nAll three datasets validated successfully.")
 
 
 def create_real_train_test():
@@ -378,27 +381,14 @@ def create_real_train_test():
             "No contracts had sufficient neighbouring IV observations."
         )
 
-    combined_df = pd.concat(
-        [train_df, test_df],
-        ignore_index=True
-    )
+    iv_train_df = train_df.copy()
+    hv_train_df = train_df.copy()
 
-    combined_df.to_csv(
-        DATA_DIR / "real_option_data_with_volatility.csv",
-        index=False
-    )
+    iv_train_df["sigma"] = iv_train_df["IV_surface"]
+    hv_train_df["sigma"] = hv_train_df["HV"]
 
-    hv_train = train_df.copy()
-    hv_test = test_df.copy()
-
-    hv_train["sigma"] = hv_train["HV"]
-    hv_test["sigma"] = hv_test["HV"]
-
-    iv_train = train_df.copy()
-    iv_test = test_df.copy()
-
-    iv_train["sigma"] = iv_train["IV_surface"]
-    iv_test["sigma"] = iv_test["IV_surface"]
+    test_df["sigma_HV"] = test_df["HV"]
+    test_df["sigma_IV"] = test_df["IV_surface"]
 
     volatility_columns = [
         "HV",
@@ -406,44 +396,44 @@ def create_real_train_test():
         "market_iv_peer"
     ]
 
-    for dataset in [hv_train, hv_test, iv_train, iv_test]:
+    for dataset in [iv_train_df, hv_train_df]:
         dataset.drop(
             columns=volatility_columns,
             inplace=True
         )
 
-    hv_train.to_csv(
-        DATA_DIR / "real_hv_train.csv",
-        index=False
+    test_df.drop(
+        columns=volatility_columns,
+        inplace=True
     )
 
-    hv_test.to_csv(
-        DATA_DIR / "real_hv_test.csv",
-        index=False
-    )
-
-    iv_train.to_csv(
+    iv_train_df.to_csv(
         DATA_DIR / "real_iv_train.csv",
         index=False
     )
 
-    iv_test.to_csv(
-        DATA_DIR / "real_iv_test.csv",
+    hv_train_df.to_csv(
+        DATA_DIR / "real_hv_train.csv",
+        index=False
+    )
+
+    test_df.to_csv(
+        DATA_DIR / "real_test.csv",
         index=False
     )
 
     validate_datasets(
-        hv_train,
-        hv_test,
-        iv_train,
-        iv_test
+        iv_train_df,
+        hv_train_df,
+        test_df
     )
 
     print(f"\nSaved datasets to {DATA_DIR}")
-    print(f"Train contracts: {len(train_df):,}")
-    print(f"Test contracts: {len(test_df):,}")
+    print(f"IV training contracts: {len(iv_train_df):,}")
+    print(f"HV training contracts: {len(hv_train_df):,}")
+    print(f"Uniform test contracts: {len(test_df):,}")
 
-    return hv_train, hv_test, iv_train, iv_test
+    return iv_train_df, hv_train_df, test_df
 
 
 if __name__ == "__main__":
